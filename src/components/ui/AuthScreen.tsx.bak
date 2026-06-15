@@ -7,16 +7,7 @@ export const AuthScreen = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [isLogin, setIsLogin] = useState(true);
-    const { setPlayer, setGameState } = useStore();
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-
-        const { data, error } = await supabase
-            .from('players')
-            .select('*')
-            .eq('nickname', nick.trim())
+  const { setPlayer, setGameState } = useStore();
             .eq('password', password)
             .single();
 
@@ -24,9 +15,7 @@ export const AuthScreen = () => {
             alert('Nickname ou senha incorretos.');
         } else {
             setPlayer({ id: data.id, nickname: data.nickname });
-            setGameState('PLAYING');
         }
-
         setLoading(false);
     };
 
@@ -47,16 +36,10 @@ export const AuthScreen = () => {
                 alert('Erro ao registrar: ' + error.message);
             }
         } else if (data) {
+            alert('Registrado! Entrando...');
             setPlayer({ id: data.id, nickname: data.nickname });
-            setGameState('PLAYING');
         }
-
         setLoading(false);
-    };
-
-    const enterGuest = () => {
-        setPlayer({ id: 'guest', nickname: 'GUEST' });
-        setGameState('PLAYING');
     };
 
     return (
@@ -118,7 +101,7 @@ export const AuthScreen = () => {
                             fontFamily: 'VT323',
                             fontSize: '1rem',
                         }}
-                        onClick={enterGuest}>
+                        onClick={() => setPlayer({ id: 'guest', nickname: 'GUEST' })}>
                         ENTER AS GUEST
                     </button>
                 </div>
