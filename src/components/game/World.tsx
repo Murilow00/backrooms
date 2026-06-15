@@ -450,7 +450,7 @@ export const World = () => {
                 dpr={[1, 1.2]} // cap pixel ratio for perf
                 gl={{ antialias: false, powerPreference: 'high-performance' }}>
                 <fog attach="fog" args={['#050403', 6, 50]} />
-                <ambientLight intensity={0.05} />
+                <ambientLight intensity={0.12} />
 
                 <PsychologicalEffects
                     setChromaOffset={setChromaOffset}
