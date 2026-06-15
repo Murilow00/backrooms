@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useKeyboardControls, PointerLockControls } from '@react-three/drei';
 import { RigidBody, CapsuleCollider, RapierRigidBody } from '@react-three/rapier';
@@ -11,103 +11,107 @@ const SPRINT_SPEED = 8;
 
 export const Player = () => {
   const ref = useRef<RapierRigidBody>(null);
+  const controlsRef = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
-  const { camera, gl } = useThree();
+  const { camera } = useThree();
   const { setGameState } = useStore();
 
   const direction = new THREE.Vector3();
   const frontVector = new THREE.Vector3();
   const sideVector = new THREE.Vector3();
-  
-  // Head bobbing state
   const bobbingPhase = useRef(0);
-  
+
   // Flashlight refs
   const lightRef = useRef<THREE.SpotLight>(null);
-  const targetRef = useRef<THREE.Object3D>(null);
+  const targetObj = useRef(new THREE.Object3D());
 
+  const handleUnlock = useCallback(() => {
+    setGameState('MENU');
+  }, [setGameState]);
+
+  // Lock pointer on first click after entering the game
   useEffect(() => {
-    try {
-       gl.domElement.requestPointerLock();
-    } catch(e) { console.error(e) }
-  }, [gl.domElement]);
+    const lockPointer = () => {
+      if (controlsRef.current) {
+        controlsRef.current.lock();
+      }
+    };
+    document.addEventListener('click', lockPointer, { once: true });
+    return () => document.removeEventListener('click', lockPointer);
+  }, []);
 
   useFrame((_state, delta) => {
     if (!ref.current) return;
-    
+
     const { forward, backward, left, right, sprint } = getKeys();
-    
+
     const velocity = ref.current.linvel();
     const position = ref.current.translation();
-    
-    // Movement logic (First Person)
+
+    // Movement
     frontVector.set(0, 0, Number(backward) - Number(forward));
     sideVector.set(Number(left) - Number(right), 0, 0);
-    
+
     direction.subVectors(frontVector, sideVector).normalize();
-    direction.applyEuler(new THREE.Euler(0, camera.rotation.y, 0)); 
-    
+    direction.applyEuler(new THREE.Euler(0, camera.rotation.y, 0));
+
     const currentSpeed = sprint ? SPRINT_SPEED : WALK_SPEED;
     direction.multiplyScalar(currentSpeed);
 
     ref.current.setLinvel({ x: direction.x, y: velocity.y, z: direction.z }, true);
 
-    // Head Bobbing logic
-    const isMoving = direction.length() > 0.1;
+    // Head Bobbing
+    const isMoving = Math.abs(direction.x) > 0.1 || Math.abs(direction.z) > 0.1;
     if (isMoving) {
-      bobbingPhase.current += delta * (sprint ? 15 : 10);
+      bobbingPhase.current += delta * (sprint ? 14 : 9);
     } else {
-      // Return to neutral smoothly
-      bobbingPhase.current = THREE.MathUtils.lerp(bobbingPhase.current, 0, 0.1);
+      bobbingPhase.current *= 0.9;
     }
-    const bobOffset = Math.sin(bobbingPhase.current) * 0.05;
+    const bobOffset = Math.sin(bobbingPhase.current) * 0.04;
 
-    // First Person Camera (Attach to head)
+    // First Person Camera
     camera.position.set(position.x, position.y + 0.8 + bobOffset, position.z);
 
-    // Update flashlight to point where camera is looking
-    if (lightRef.current && targetRef.current) {
+    // Flashlight follows camera
+    if (lightRef.current) {
       lightRef.current.position.copy(camera.position);
-      
-      // Calculate a point 10 units in front of the camera
-      const lookAtVector = new THREE.Vector3(0, 0, -10);
-      lookAtVector.applyQuaternion(camera.quaternion);
-      targetRef.current.position.copy(camera.position).add(lookAtVector);
+      const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      targetObj.current.position.copy(camera.position).add(lookDir.multiplyScalar(10));
+      lightRef.current.target = targetObj.current;
     }
 
-    // Sync state for Multiplayer (Others will see our position)
+    // Sync for multiplayer
     localPlayerState.position = [position.x, position.y - 0.8, position.z];
     localPlayerState.rotation = [0, camera.rotation.y, 0];
   });
 
   return (
     <>
-      <PointerLockControls selector="#root" onUnlock={() => setGameState('MENU')} />
-      
-      {/* Flashlight attached to camera */}
-      <spotLight 
-        ref={lightRef}
-        angle={0.6} 
-        penumbra={0.5} 
-        intensity={3} 
-        distance={30} 
-        castShadow 
-        color="#fffce6"
-        target={targetRef.current || undefined}
-      />
-      <primitive object={new THREE.Object3D()} ref={targetRef} />
+      <PointerLockControls ref={controlsRef} onUnlock={handleUnlock} />
 
-      <RigidBody 
-        ref={ref} 
-        colliders={false} 
-        mass={1} 
-        type="dynamic" 
-        position={[0, 2, 0]} 
+      {/* Flashlight */}
+      <spotLight
+        ref={lightRef}
+        angle={0.55}
+        penumbra={0.4}
+        intensity={4}
+        distance={25}
+        castShadow
+        color="#fffce6"
+        shadow-mapSize={512}
+      />
+      <primitive object={targetObj.current} />
+
+      <RigidBody
+        ref={ref}
+        colliders={false}
+        mass={1}
+        type="dynamic"
+        position={[0, 3, 0]}
         enabledRotations={[false, false, false]}
-        friction={0} 
+        friction={0}
       >
-        <CapsuleCollider args={[0.5, 0.9]} />
-        {/* Local player is invisible to themselves in First Person */}
+        <CapsuleCollider args={[0.5, 0.5]} />
       </RigidBody>
     </>
   );
