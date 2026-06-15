@@ -345,15 +345,24 @@ const PsychologicalEffects = ({
     setNoiseOpacity: (n: number) => void;
 }) => {
     const { scene } = useThree();
+    const fogRef = useRef(new THREE.FogExp2('#050403', 0.04));
     const flickerRef = useRef(0);
     const pulseTime = useRef(0);
+
+    useEffect(() => {
+        scene.fog = fogRef.current;
+        return () => {
+            if (scene.fog === fogRef.current) scene.fog = null;
+        };
+    }, [scene]);
 
     useFrame((_s, delta) => {
         flickerRef.current += delta;
 
         // subtle base fog jitter
         const flicker = Math.sin(flickerRef.current * 2.3) * Math.sin(flickerRef.current * 7.1);
-        scene.fog = new THREE.FogExp2('#050403', 0.04 + flicker * 0.01);
+        const fog = scene.fog as THREE.FogExp2 | null;
+        if (fog) fog.density = 0.04 + flicker * 0.01;
 
         // Random pulse events that increase noise and chromatic aberration briefly
         if (pulseTime.current > 0) {
@@ -386,8 +395,9 @@ export const World = () => {
     const [chromaOffset, setChromaOffset] = useState(new THREE.Vector2(0.002, 0.002));
     const [noiseOpacity, setNoiseOpacity] = useState(0.25);
     const [jumpScare, setJumpScare] = useState(false);
-    const audioCtxRef = useRef<AudioContext | null>(null);
     const [pointerLocked, setPointerLocked] = useState<boolean>(false);
+    const [requestPointerLock, setRequestPointerLock] = useState(false);
+    const audioCtxRef = useRef<AudioContext | null>(null);
 
     const triggerJumpScare = () => {
         if (jumpScare) return;
@@ -427,6 +437,8 @@ export const World = () => {
         }
     };
 
+    const rootRef = useRef<HTMLDivElement>(null);
+
     // Track pointer lock to show a helpful instruction when not locked
     useEffect(() => {
         const onChange = () => setPointerLocked(!!document.pointerLockElement);
@@ -436,8 +448,17 @@ export const World = () => {
         return () => document.removeEventListener('pointerlockchange', onChange);
     }, []);
 
+    useEffect(() => {
+        if (!requestPointerLock || !rootRef.current) return;
+        rootRef.current.requestPointerLock?.();
+        setRequestPointerLock(false);
+    }, [requestPointerLock]);
+
     return (
-        <>
+        <div
+            ref={rootRef}
+            onClick={() => setRequestPointerLock(true)}
+            style={{ width: '100vw', height: '100vh', position: 'relative' }}>
             <KeyboardControls
                 map={[
                     { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
@@ -555,6 +576,6 @@ export const World = () => {
                 </div>
             )}
             {/* end fragment */}
-        </>
+        </div>
     );
 };
