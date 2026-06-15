@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics, RigidBody } from '@react-three/rapier';
 import { KeyboardControls } from '@react-three/drei';
@@ -54,9 +54,9 @@ const BackroomsLevel = () => {
                 {walls.map((wall, index) => (
                     <RigidBody key={index} type="fixed" colliders="cuboid">
                         <mesh
-                            position={wall.position}
-                            rotation={wall.rotation}
-                            scale={wall.scale}
+                            position={wall.position as [number, number, number]}
+                            rotation={wall.rotation as [number, number, number]}
+                            scale={wall.scale as [number, number, number]}
                             castShadow
                             receiveShadow>
                             <boxGeometry />
@@ -105,7 +105,7 @@ const Entity = () => {
     const meshRef = useRef<THREE.Group>(null);
     const { camera } = useThree();
 
-    useFrame((state, delta) => {
+    useFrame((_state, delta) => {
         if (!meshRef.current) return;
 
         // Very simple chase AI: move towards the local player (camera) constantly
@@ -186,7 +186,7 @@ export const World = () => {
                 </Physics>
 
                 {/* Found Footage Post Processing */}
-                <EffectComposer disableNormalPass>
+                <EffectComposer enableNormalPass={false}>
                     <Noise opacity={0.3} />
                     <Scanline density={1.5} opacity={0.5} />
                     <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />

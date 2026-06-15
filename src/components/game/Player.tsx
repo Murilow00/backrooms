@@ -11,7 +11,7 @@ const SPRINT_SPEED = 8;
 
 export const Player = () => {
   const ref = useRef<RapierRigidBody>(null);
-  const [subscribeKeys, getKeys] = useKeyboardControls();
+  const [, getKeys] = useKeyboardControls();
   const { camera, gl } = useThree();
   const { setGameState } = useStore();
 
@@ -32,7 +32,7 @@ export const Player = () => {
     } catch(e) { console.error(e) }
   }, [gl.domElement]);
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (!ref.current) return;
     
     const { forward, backward, left, right, sprint } = getKeys();
