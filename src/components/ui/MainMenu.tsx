@@ -1,18 +1,18 @@
 import { useStore } from '../../store/useStore';
-import { supabase } from '../../lib/supabase';
 
 export const MainMenu = () => {
-  const { setGameState } = useStore();
+  const { setGameState, player, setPlayer } = useStore();
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#000' }}>
       <div className="vhs-overlay"></div>
-      
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2rem', zIndex: 11 }}>
-        <button 
-          className="fn-btn" 
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2rem', zIndex: 11 }}>
+        <span style={{ fontSize: '1.5rem', opacity: 0.7 }}>Subject: {player?.nickname}</span>
+        <button
+          className="fn-btn"
           style={{ fontSize: '1.2rem', padding: '0.5rem 1rem' }}
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => setPlayer(null)}
         >
           DISCONNECT
         </button>

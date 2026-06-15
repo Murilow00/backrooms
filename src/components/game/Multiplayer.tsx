@@ -46,12 +46,12 @@ const OtherSurvivor = ({ position, rotation }: { position: number[], rotation: n
 };
 
 export const Multiplayer = () => {
-  const { user } = useStore();
+  const { player } = useStore();
   const [otherPlayers, setOtherPlayers] = useState<Record<string, { position: number[], rotation: number[] }>>({});
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!player) return;
 
     const channel = supabase.channel('backrooms-level-0', {
       config: { broadcast: { ack: false } }
@@ -60,10 +60,10 @@ export const Multiplayer = () => {
     channelRef.current = channel;
 
     channel.on('broadcast', { event: 'movement' }, ({ payload }) => {
-      if (payload.userId === user.id) return;
+      if (payload.odPlayerId === player.id) return;
       setOtherPlayers(prev => ({
         ...prev,
-        [payload.userId]: { position: payload.position, rotation: payload.rotation }
+        [payload.odPlayerId]: { position: payload.position, rotation: payload.rotation }
       }));
     });
 
@@ -72,16 +72,16 @@ export const Multiplayer = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [player]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (channelRef.current && channelRef.current.state === 'joined' && user) {
+      if (channelRef.current && channelRef.current.state === 'joined' && player) {
         channelRef.current.send({
           type: 'broadcast',
           event: 'movement',
           payload: {
-            userId: user.id,
+            odPlayerId: player.id,
             position: localPlayerState.position,
             rotation: localPlayerState.rotation
           }
@@ -90,7 +90,7 @@ export const Multiplayer = () => {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [player]);
 
   return (
     <>
