@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { KeyboardControls, Text } from '@react-three/drei';
@@ -387,6 +387,7 @@ export const World = () => {
     const [noiseOpacity, setNoiseOpacity] = useState(0.25);
     const [jumpScare, setJumpScare] = useState(false);
     const audioCtxRef = useRef<AudioContext | null>(null);
+    const [pointerLocked, setPointerLocked] = useState<boolean>(false);
 
     const triggerJumpScare = () => {
         if (jumpScare) return;
@@ -426,95 +427,134 @@ export const World = () => {
         }
     };
 
+    // Track pointer lock to show a helpful instruction when not locked
+    useEffect(() => {
+        const onChange = () => setPointerLocked(!!document.pointerLockElement);
+        document.addEventListener('pointerlockchange', onChange);
+        // set initial
+        setPointerLocked(!!document.pointerLockElement);
+        return () => document.removeEventListener('pointerlockchange', onChange);
+    }, []);
+
     return (
-        <KeyboardControls
-            map={[
-                { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
-                { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
-                { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
-                { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
-                { name: 'sprint', keys: ['Shift'] },
-            ]}>
-            <Canvas
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    zIndex: 0,
-                    backgroundColor: '#050403',
-                }}
-                shadows={false} // global shadows off for perf — only flashlight uses it
-                camera={{ fov: 80, near: 0.15, far: 120 }}
-                dpr={[1, 1.2]} // cap pixel ratio for perf
-                gl={{ antialias: false, powerPreference: 'high-performance' }}>
-                <fog attach="fog" args={['#050403', 6, 50]} />
-                <ambientLight intensity={0.12} />
+        <>
+            <KeyboardControls
+                map={[
+                    { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
+                    { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
+                    { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
+                    { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
+                    { name: 'sprint', keys: ['Shift'] },
+                ]}>
+                <Canvas
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        zIndex: 0,
+                        backgroundColor: '#050403',
+                    }}
+                    shadows={false} // global shadows off for perf — only flashlight uses it
+                    camera={{ fov: 80, near: 0.15, far: 120 }}
+                    dpr={[1, 1.2]} // cap pixel ratio for perf
+                    gl={{ antialias: false, powerPreference: 'high-performance' }}>
+                    <fog attach="fog" args={['#050403', 6, 80]} />
+                    <ambientLight intensity={0.6} />
+                    <hemisphereLight args={['#ffffff', '#222222', 0.35]} />
+                    <directionalLight position={[10, 15, 5]} intensity={0.6} />
 
-                <PsychologicalEffects
-                    setChromaOffset={setChromaOffset}
-                    setNoiseOpacity={setNoiseOpacity}
-                />
+                    <PsychologicalEffects
+                        setChromaOffset={setChromaOffset}
+                        setNoiseOpacity={setNoiseOpacity}
+                    />
 
-                <Physics gravity={[0, -20, 0]} timeStep="vary">
-                    <SafeRoom />
-                    <BackroomsLevel />
-                    <Entity onJumpScare={triggerJumpScare} />
-                    {gameState === 'PLAYING' && <Player />}
-                    <Multiplayer />
-                </Physics>
+                    <Physics gravity={[0, -20, 0]} timeStep="vary">
+                        <SafeRoom />
+                        <BackroomsLevel />
+                        <Entity onJumpScare={triggerJumpScare} />
+                        {gameState === 'PLAYING' && <Player />}
+                        <Multiplayer />
+                    </Physics>
 
-                <EffectComposer enableNormalPass={false} multisampling={0}>
-                    <Noise opacity={noiseOpacity} />
-                    <ChromaticAberration offset={chromaOffset} />
-                    <Vignette eskil={false} offset={0.25} darkness={0.95} />
-                </EffectComposer>
-            </Canvas>
+                    <EffectComposer enableNormalPass={false} multisampling={0}>
+                        <Noise opacity={noiseOpacity} />
+                        <ChromaticAberration offset={chromaOffset} />
+                        <Vignette eskil={false} offset={0.25} darkness={0.7} />
+                    </EffectComposer>
+                </Canvas>
 
-            {/* Jump-scare visual flash */}
-            {jumpScare && (
+                {/* Jump-scare visual flash */}
+                {jumpScare && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(255,30,30,0.95)',
+                            zIndex: 99999,
+                            pointerEvents: 'none',
+                            mixBlendMode: 'screen',
+                        }}
+                    />
+                )}
+
+                {/* VHS HUD */}
+                {gameState === 'PLAYING' && (
+                    <div className="vhs-overlay">
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '1rem',
+                                right: '2rem',
+                                fontFamily: 'VT323',
+                                color: '#cc0000',
+                                fontSize: '2rem',
+                                animation: 'blink 1.5s step-start infinite',
+                            }}>
+                            ● REC
+                        </div>
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: '1rem',
+                                left: '2rem',
+                                fontFamily: 'VT323',
+                                color: 'rgba(255,255,255,0.5)',
+                                fontSize: '1.4rem',
+                            }}>
+                            CAM-01 &nbsp;|&nbsp; LEVEL 0
+                        </div>
+                        <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
+                    </div>
+                )}
+            </KeyboardControls>
+            {/* Pointer lock instruction overlay */}
+            {gameState === 'PLAYING' && !pointerLocked && (
                 <div
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(255,30,30,0.95)',
-                        zIndex: 99999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         pointerEvents: 'none',
-                        mixBlendMode: 'screen',
-                    }}
-                />
-            )}
-
-            {/* VHS HUD */}
-            {gameState === 'PLAYING' && (
-                <div className="vhs-overlay">
+                        zIndex: 100000,
+                    }}>
                     <div
                         style={{
-                            position: 'absolute',
-                            top: '1rem',
-                            right: '2rem',
+                            background: 'rgba(0,0,0,0.6)',
+                            padding: '1rem 2rem',
+                            borderRadius: 6,
+                            color: '#fff',
                             fontFamily: 'VT323',
-                            color: '#cc0000',
-                            fontSize: '2rem',
-                            animation: 'blink 1.5s step-start infinite',
+                            fontSize: '1.5rem',
                         }}>
-                        ● REC
+                        Clique para começar — dê um clique na tela para travar o ponteiro
                     </div>
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: '1rem',
-                            left: '2rem',
-                            fontFamily: 'VT323',
-                            color: 'rgba(255,255,255,0.5)',
-                            fontSize: '1.4rem',
-                        }}>
-                        CAM-01 &nbsp;|&nbsp; LEVEL 0
-                    </div>
-                    <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
                 </div>
             )}
-        </KeyboardControls>
+            {/* end fragment */}
+        </>
     );
 };
