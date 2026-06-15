@@ -52,7 +52,7 @@ const BackroomsLevel = () => {
         [],
     );
 
-    useMemo(() => {
+    useEffect(() => {
         if (!wallMesh.current) return;
         wallData.forEach((w, i) => {
             dummy.position.set(...w.pos);
@@ -481,10 +481,16 @@ export const World = () => {
                     camera={{ fov: 80, near: 0.15, far: 120 }}
                     dpr={[1, 1.2]} // cap pixel ratio for perf
                     gl={{ antialias: false, powerPreference: 'high-performance' }}>
-                    <fog attach="fog" args={['#050403', 6, 80]} />
-                    <ambientLight intensity={0.6} />
-                    <hemisphereLight args={['#ffffff', '#222222', 0.35]} />
-                    <directionalLight position={[10, 15, 5]} intensity={0.6} />
+                    <fog attach="fog" args={['#050403', 6, 48]} />
+                    <ambientLight intensity={1.3} />
+                    <hemisphereLight args={['#ffffff', '#aaaaaa', 0.5]} />
+                    <directionalLight position={[10, 15, 5]} intensity={1.2} />
+                    <pointLight
+                        position={[0, 7, 0]}
+                        intensity={2.4}
+                        distance={30}
+                        color="#fff7dd"
+                    />
 
                     <PsychologicalEffects
                         setChromaOffset={setChromaOffset}
