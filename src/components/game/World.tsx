@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { KeyboardControls, Text } from '@react-three/drei';
@@ -344,7 +344,7 @@ const PsychologicalEffects = ({
     setChromaOffset: (v: THREE.Vector2) => void;
     setNoiseOpacity: (n: number) => void;
 }) => {
-    const { camera, scene } = useThree();
+    const { scene } = useThree();
     const flickerRef = useRef(0);
     const pulseTime = useRef(0);
 
